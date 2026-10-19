@@ -5,7 +5,7 @@ import java.util.Map;
 public class LoginService {
     private static final String DOMAINE_INSTITUTIONNEL = "@usms.ac.ma";
 
-    // Comptes simulés
+    // Comptes simulés (pas de base de données)
     private final Map<String, String> comptes =
             Map.of("etudiant@usms.ac.ma", "Passw0rd!2026");
 
