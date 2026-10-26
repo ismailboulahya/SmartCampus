@@ -1,0 +1,25 @@
+services:
+  api:
+    build: .
+    image: smartcampus:1.0
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/smartcampus
+      DB_USER: smartcampus
+      DB_PASSWORD: smartcampus_pwd
+      JWT_SECRET: smartcampus-dev-secret-key-please-change-1234567890
+    depends_on:
+      - db
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: smartcampus
+      POSTGRES_USER: smartcampus
+      POSTGRES_PASSWORD: smartcampus_pwd
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
