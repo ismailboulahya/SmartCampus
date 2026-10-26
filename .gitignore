@@ -1,6 +1,7 @@
 target/
 .idea/
 *.class
+.agents
 .env
 SmartCampus.iml
 Tospring.sh

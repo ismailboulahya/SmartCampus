@@ -1,19 +1,33 @@
 package ma.ensa.smartcampus.auth;
 
-import java.util.Map;
+import java.util.Optional;
+import ma.ensa.smartcampus.model.User;
+import ma.ensa.smartcampus.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
 
+@Service
 public class LoginService {
+
     private static final String DOMAINE_INSTITUTIONNEL = "@usms.ac.ma";
 
-    // Comptes simulés (pas de base de données)
-    private final Map<String, String> comptes =
-            Map.of("etudiant@usms.ac.ma", "Passw0rd!2026");
+    private final UserRepository users;
+    private final PasswordEncoder passwordEncoder;
 
-    public boolean authenticate(String email, String password) {
-        if (email == null || password == null
-                || !email.endsWith(DOMAINE_INSTITUTIONNEL)) {
-            return false;
+    public LoginService(UserRepository users, PasswordEncoder passwordEncoder) {
+        this.users = users;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    public Optional<User> authenticate(String email, String password) {
+        if (email == null || password == null) {
+            return Optional.empty();
         }
-        return password.equals(comptes.get(email));
+        String normalise = email.trim().toLowerCase();
+        if (!normalise.endsWith(DOMAINE_INSTITUTIONNEL)) {
+            return Optional.empty();
+        }
+        return users.findByEmail(normalise)
+                .filter(user -> passwordEncoder.matches(password, user.getPassword()));
     }
 }
