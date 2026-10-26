@@ -1,30 +1,48 @@
 package ma.ensa.smartcampus.auth;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
+
+import java.util.Optional;
+import ma.ensa.smartcampus.model.User;
+import ma.ensa.smartcampus.repository.UserRepository;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+import org.mockito.Mockito;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 public class LoginServiceTest {
 
-    private final LoginService loginService = new LoginService();
+    private final UserRepository users = Mockito.mock(UserRepository.class);
+    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final LoginService loginService = new LoginService(users, passwordEncoder);
+
+    private void compteExistant() {
+        when(users.findByEmail("etudiant@usms.ac.ma")).thenReturn(Optional.of(
+                new User(1L, "etudiant@usms.ac.ma", passwordEncoder.encode("Passw0rd!2026"), "STUDENT")));
+    }
 
     @Test
     public void testLoginSuccess() {
-        // Test avec un email et un mot de passe valides
-        boolean result = loginService.authenticate("etudiant@usms.ac.ma", "Passw0rd!2026");
-        assertTrue(result, "La connexion devrait réussir avec les bons identifiants.");
+        compteExistant();
+        assertTrue(loginService.authenticate("etudiant@usms.ac.ma", "Passw0rd!2026").isPresent());
     }
 
     @Test
     public void testLoginFailureWrongPassword() {
-        // Test avec un mauvais mot de passe
-        boolean result = loginService.authenticate("etudiant@usms.ac.ma", "MotDePasseFaux");
-        assertFalse(result, "La connexion devrait échouer avec un mauvais mot de passe.");
+        compteExistant();
+        assertFalse(loginService.authenticate("etudiant@usms.ac.ma", "MotDePasseFaux").isPresent());
     }
 
     @Test
     public void testLoginFailureWrongDomain() {
-        // Test avec un domaine non institutionnel
-        boolean result = loginService.authenticate("etudiant@gmail.com", "Passw0rd!2026");
-        assertFalse(result, "La connexion devrait échouer si le domaine n'est pas @usms.ac.ma.");
+        assertFalse(loginService.authenticate("etudiant@gmail.com", "Passw0rd!2026").isPresent());
+    }
+
+    @Test
+    public void testLoginIgnoreLaCasseDeLEmail() {
+        compteExistant();
+        assertTrue(loginService.authenticate("Etudiant@USMS.AC.MA", "Passw0rd!2026").isPresent());
     }
 }

@@ -1,4 +1,4 @@
-package ma.ensa.smartcampus;
+package ma.ensa.smartcampus.controller;
 
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
