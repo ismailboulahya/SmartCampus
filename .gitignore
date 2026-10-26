@@ -3,3 +3,4 @@ target/
 *.class
 .env
 SmartCampus.iml
+Tospring.sh
