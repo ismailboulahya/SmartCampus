@@ -2,6 +2,8 @@ target/
 .idea/
 *.class
 .agents
+.env.example
 .env
 SmartCampus.iml
 Tospring.sh
+k8s/secret.yaml
