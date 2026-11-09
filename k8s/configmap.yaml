@@ -3,6 +3,5 @@ kind: ConfigMap
 metadata:
   name: smartcampus-config
 data:
-  POSTGRES_USER: "${POSTGRES_USER}"
-  POSTGRES_DB: "${POSTGRES_DB}"
-  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/${POSTGRES_DB}"
+  DB_URL: "jdbc:postgresql://postgres:5432/smartcampus"
+  DB_USER: "smartcampus"
