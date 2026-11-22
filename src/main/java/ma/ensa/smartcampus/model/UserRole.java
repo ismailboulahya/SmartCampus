@@ -1,10 +1,11 @@
 package ma.ensa.smartcampus.model;
 
 /**
- * Rôles disponibles dans SmartCampus, conformément au diagramme de classes.
+ * Rôle applicatif utilisé par Spring Security. Il correspond au type concret de l'utilisateur.
  */
 public enum UserRole {
+    ETUDIANT,
+    PROFESSEUR,
     ADMIN,
-    CHEF_ATELIER,
-    SOUS_CHEF
+    SUPERADMIN
 }

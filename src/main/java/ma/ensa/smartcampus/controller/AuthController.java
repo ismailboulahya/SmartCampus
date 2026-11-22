@@ -59,8 +59,8 @@ public class AuthController {
                         "success", true,
                         "token", jwtService.generate(utilisateur),
                         "role", utilisateur.getRole().name(),
-                        "firstName", utilisateur.getFirstName(),
-                        "lastName", utilisateur.getLastName()));
+                        "nom", utilisateur.getNom(),
+                        "prenom", utilisateur.getPrenom()));
             }
         };
     }
@@ -76,8 +76,8 @@ public class AuthController {
         return ResponseEntity.ok(Map.of(
                 "success", true,
                 "email", utilisateur.getEmail(),
-                "firstName", utilisateur.getFirstName(),
-                "lastName", utilisateur.getLastName(),
+                "nom", utilisateur.getNom(),
+                "prenom", utilisateur.getPrenom(),
                 "role", utilisateur.getRole().name()));
     }
 

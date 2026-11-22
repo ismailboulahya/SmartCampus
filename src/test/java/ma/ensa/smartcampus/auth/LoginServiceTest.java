@@ -8,8 +8,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import ma.ensa.smartcampus.model.Etudiant;
+import ma.ensa.smartcampus.model.Filiere;
+import ma.ensa.smartcampus.model.NiveauEducation;
 import ma.ensa.smartcampus.model.User;
-import ma.ensa.smartcampus.model.UserRole;
 import ma.ensa.smartcampus.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -18,14 +20,14 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 public class LoginServiceTest {
 
-    private static final String EMAIL = "souschef@usms.ac.ma";
-    private static final String MOT_DE_PASSE = "SousChef!2026";
+    private static final String EMAIL = "etudiant@usms.ac.ma";
+    private static final String MOT_DE_PASSE = "Etudiant!2026";
 
     private final UserRepository users = Mockito.mock(UserRepository.class);
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final LoginService loginService = new LoginService(users, passwordEncoder);
-    private final User compte = new User("Youssef", "Kabbaj", EMAIL, passwordEncoder.encode(MOT_DE_PASSE),
-            UserRole.SOUS_CHEF, 1003L, 1);
+    private final User compte = new Etudiant("Kabbaj", "Youssef", EMAIL, passwordEncoder.encode(MOT_DE_PASSE),
+            "E123456", "AB123456", Filiere.GI, NiveauEducation.CYCLE1);
 
     private void compteExistant() {
         when(users.findByEmail(EMAIL)).thenReturn(Optional.of(compte));
@@ -45,13 +47,13 @@ public class LoginServiceTest {
 
     @Test
     public void testLoginFailureWrongDomain() {
-        assertEquals(IDENTIFIANTS_INVALIDES, loginService.authentifier("souschef@gmail.com", MOT_DE_PASSE).statut());
+        assertEquals(IDENTIFIANTS_INVALIDES, loginService.authentifier("etudiant@gmail.com", MOT_DE_PASSE).statut());
     }
 
     @Test
     public void testLoginIgnoreLaCasseDeLEmail() {
         compteExistant();
-        assertEquals(SUCCES, loginService.authentifier("SousChef@USMS.AC.MA", MOT_DE_PASSE).statut());
+        assertEquals(SUCCES, loginService.authentifier("Etudiant@USMS.AC.MA", MOT_DE_PASSE).statut());
     }
 
     @Test
@@ -61,8 +63,8 @@ public class LoginServiceTest {
             assertEquals(IDENTIFIANTS_INVALIDES, loginService.authentifier(EMAIL, "MotDePasseFaux").statut());
         }
         assertEquals(COMPTE_VERROUILLE, loginService.authentifier(EMAIL, "MotDePasseFaux").statut());
-        assertTrue(compte.isLocked());
-        assertEquals(5, compte.getFailedLoginAttempts());
+        assertTrue(compte.isVerrouille());
+        assertEquals(5, compte.getNbrConnexionEchouee());
     }
 
     @Test

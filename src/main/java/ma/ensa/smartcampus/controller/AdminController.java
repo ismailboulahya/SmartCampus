@@ -29,10 +29,9 @@ public class AdminController {
         return Map.of(
                 "id", utilisateur.getId(),
                 "email", utilisateur.getEmail(),
-                "firstName", utilisateur.getFirstName(),
-                "lastName", utilisateur.getLastName(),
+                "nom", utilisateur.getNom(),
+                "prenom", utilisateur.getPrenom(),
                 "role", utilisateur.getRole().name(),
-                "matricule", utilisateur.getMatricule() == null ? 0L : utilisateur.getMatricule(),
-                "active", utilisateur.isActive());
+                "verrouille", utilisateur.isVerrouille());
     }
 }

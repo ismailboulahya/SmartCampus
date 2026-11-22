@@ -51,8 +51,8 @@ export function AuthProvider({ children }) {
       setUser({
         email: email.trim().toLowerCase(),
         role: result.data.role,
-        firstName: result.data.firstName,
-        lastName: result.data.lastName,
+        nom: result.data.nom,
+        prenom: result.data.prenom,
       });
     }
     return result;

@@ -12,7 +12,7 @@ export default function App() {
     return <LoginPage />;
   }
 
-  const nomComplet = [user.firstName, user.lastName].filter(Boolean).join(' ');
+  const nomComplet = [user.prenom, user.nom].filter(Boolean).join(' ');
 
   // Placeholder : les espaces étudiant et admin seront ajoutés à l'étape suivante.
   return (

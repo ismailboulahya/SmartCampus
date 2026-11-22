@@ -61,17 +61,14 @@ public class LoginService {
         User utilisateur = trouve.get();
         LocalDateTime maintenant = LocalDateTime.now();
 
-        if (utilisateur.isLocked() && !utilisateur.estVerrouille(maintenant)) {
+        if (utilisateur.isVerrouille() && !utilisateur.estVerrouille(maintenant)) {
             // Le verrouillage a expiré : l'utilisateur repart avec un compteur vierge.
             utilisateur.reinitialiserLesTentatives();
         }
         if (utilisateur.estVerrouille(maintenant)) {
             return Resultat.compteVerrouille(utilisateur);
         }
-        if (!utilisateur.isActive()) {
-            return Resultat.identifiantsInvalides();
-        }
-        if (!passwordEncoder.matches(password, utilisateur.getPassword())) {
+        if (!passwordEncoder.matches(password, utilisateur.getMotDePasseHash())) {
             utilisateur.enregistrerEchecDeConnexion(MAX_ECHECS_AVANT_VERROUILLAGE, DUREE_DU_VERROUILLAGE, maintenant);
             users.save(utilisateur);
             return utilisateur.estVerrouille(maintenant)
@@ -79,7 +76,7 @@ public class LoginService {
                     : Resultat.identifiantsInvalides();
         }
 
-        if (utilisateur.getFailedLoginAttempts() > 0 || utilisateur.isLocked()) {
+        if (utilisateur.getNbrConnexionEchouee() > 0 || utilisateur.isVerrouille()) {
             utilisateur.reinitialiserLesTentatives();
             users.save(utilisateur);
         }
