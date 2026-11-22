@@ -1,34 +1,59 @@
 package ma.ensa.smartcampus.auth;
 
-import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import org.springframework.stereotype.Component;
 
+/**
+ * Limite les tentatives de connexion par adresse email sur une fenêtre glissante.
+ * Les clefs inactives sont évincées pour éviter de faire grossir la map indéfiniment.
+ */
 @Component
 public class LoginRateLimiter {
 
-    private static final int MAX_ATTEMPTS = 5;
-    private static final long WINDOW_MS = 60_000L;
+    private static final int MAX_TENTATIVES = 5;
+    private static final long FENETRE_MS = 60_000L;
 
-    private final Map<String, Deque<Long>> attempts = new ConcurrentHashMap<>();
+    private final Map<String, Deque<Long>> tentatives = new ConcurrentHashMap<>();
 
-    public boolean isBlocked(String email) {
-        Deque<Long> times = attempts.get(email);
-        if (times == null) {
+    public boolean estBloque(String email) {
+        Deque<Long> horodatages = tentatives.get(clef(email));
+        if (horodatages == null) {
             return false;
         }
-        long now = System.currentTimeMillis();
-        times.removeIf(time -> now - time > WINDOW_MS);
-        return times.size() >= MAX_ATTEMPTS;
+        purgerLesTentativesExpirees(horodatages);
+        return horodatages.size() >= MAX_TENTATIVES;
     }
 
-    public void recordFailure(String email) {
-        attempts.computeIfAbsent(email, key -> new ArrayDeque<>()).add(System.currentTimeMillis());
+    public void enregistrerEchec(String email) {
+        long maintenant = System.currentTimeMillis();
+        tentatives.computeIfAbsent(clef(email), k -> new ConcurrentLinkedDeque<>()).addLast(maintenant);
+        purgerLesClesInactives(maintenant);
     }
 
-    public void reset(String email) {
-        attempts.remove(email);
+    public void reinitialiser(String email) {
+        tentatives.remove(clef(email));
+    }
+
+    private static String clef(String email) {
+        return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static void purgerLesTentativesExpirees(Deque<Long> horodatages) {
+        long limite = System.currentTimeMillis() - FENETRE_MS;
+        Long plusAncienne;
+        while ((plusAncienne = horodatages.peekFirst()) != null && plusAncienne < limite) {
+            horodatages.pollFirst();
+        }
+    }
+
+    private void purgerLesClesInactives(long maintenant) {
+        tentatives.entrySet().removeIf(entree -> {
+            Long plusRecente = entree.getValue().peekLast();
+            return plusRecente == null || maintenant - plusRecente > FENETRE_MS;
+        });
     }
 }

@@ -9,6 +9,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(Boolean(sessionStorage.getItem(TOKEN_KEY)));
 
+  const oublierLeToken = useCallback(() => {
+    sessionStorage.removeItem(TOKEN_KEY);
+    setToken(null);
+    setUser(null);
+  }, []);
+
   // Au chargement de la page, on vérifie que le token stocké est encore valide.
   useEffect(() => {
     if (!token) {
@@ -16,37 +22,46 @@ export function AuthProvider({ children }) {
       return;
     }
     let cancelled = false;
-    fetchCurrentUser(token).then((me) => {
-      if (cancelled) return;
-      if (me && me.success !== false) {
-        setUser(me);
-      } else {
-        sessionStorage.removeItem(TOKEN_KEY);
-        setToken(null);
-      }
-      setLoading(false);
-    });
+    fetchCurrentUser(token)
+      .then((me) => {
+        if (cancelled) return;
+        if (me && me.success !== false) {
+          setUser(me);
+        } else {
+          oublierLeToken();
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        // API injoignable : on affiche l'écran de connexion au lieu de rester bloqué.
+        if (cancelled) return;
+        oublierLeToken();
+        setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, oublierLeToken]);
 
   const login = useCallback(async (email, password) => {
     const result = await loginRequest(email, password);
     if (result.ok && result.data?.success) {
       sessionStorage.setItem(TOKEN_KEY, result.data.token);
       setToken(result.data.token);
-      setUser({ email: email.trim().toLowerCase(), role: result.data.role });
+      setUser({
+        email: email.trim().toLowerCase(),
+        role: result.data.role,
+        nom: result.data.nom,
+        prenom: result.data.prenom,
+      });
     }
     return result;
   }, []);
 
   // L'API de déconnexion ne gère pas de session : il suffit d'oublier le token côté client.
   const logout = useCallback(() => {
-    sessionStorage.removeItem(TOKEN_KEY);
-    setToken(null);
-    setUser(null);
-  }, []);
+    oublierLeToken();
+  }, [oublierLeToken]);
 
   return (
     <AuthContext.Provider value={{ token, user, loading, login, logout }}>

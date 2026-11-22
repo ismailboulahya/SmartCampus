@@ -6,8 +6,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ma.ensa.smartcampus.repository.UserRepository;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import ma.ensa.smartcampus.model.Admin;
+import ma.ensa.smartcampus.model.Etudiant;
+import ma.ensa.smartcampus.model.Filiere;
+import ma.ensa.smartcampus.model.NiveauEducation;
 import ma.ensa.smartcampus.model.User;
+import ma.ensa.smartcampus.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,13 +41,14 @@ class SecurityIntegrationTest {
 
     @BeforeEach
     void seed() {
-        seedUser("admin@usms.ac.ma", "Admin!2026", "ADMIN");
-        seedUser("etudiant@usms.ac.ma", "Passw0rd!2026", "STUDENT");
-    }
-
-    private void seedUser(String email, String password, String role) {
-        if (!users.existsByEmail(email)) {
-            users.save(new User(null, email, passwordEncoder.encode(password), role));
+        if (!users.existsByEmail("admin@usms.ac.ma")) {
+            users.save(new Admin("El Amrani", "Ahmed", "admin@usms.ac.ma",
+                    passwordEncoder.encode("Admin!2026"), "Scolarité"));
+        }
+        if (!users.existsByEmail("etudiant@usms.ac.ma")) {
+            users.save(new Etudiant("Kabbaj", "Youssef", "etudiant@usms.ac.ma",
+                    passwordEncoder.encode("Etudiant!2026"), "E123456", "AB123456",
+                    Filiere.GI, NiveauEducation.CYCLE1));
         }
     }
 
@@ -62,6 +69,7 @@ class SecurityIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.role").value("ADMIN"))
+                .andExpect(jsonPath("$.nom").value("El Amrani"))
                 .andExpect(jsonPath("$.token").isNotEmpty());
     }
 
@@ -82,6 +90,24 @@ class SecurityIntegrationTest {
     }
 
     @Test
+    void loginSurCompteVerrouilleRetourne423() throws Exception {
+        String email = "verrouille@usms.ac.ma";
+        if (!users.existsByEmail(email)) {
+            User compte = new Etudiant("Verrouille", "Compte", email,
+                    passwordEncoder.encode("Verrouille!2026"), "E999999", "AB999999",
+                    Filiere.GI, NiveauEducation.CYCLE1);
+            for (int tentative = 1; tentative <= 5; tentative++) {
+                compte.enregistrerEchecDeConnexion(5, Duration.ofMinutes(15), LocalDateTime.now());
+            }
+            users.save(compte);
+        }
+        mockMvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"Verrouille!2026\"}"))
+                .andExpect(status().isLocked());
+    }
+
+    @Test
     void routeAdminSansTokenRetourne401() throws Exception {
         mockMvc.perform(get("/api/admin/users")).andExpect(status().isUnauthorized());
     }
@@ -97,16 +123,17 @@ class SecurityIntegrationTest {
     @Test
     void routeAdminAvecTokenEtudiantRetourne403() throws Exception {
         mockMvc.perform(get("/api/admin/users")
-                        .header("Authorization", "Bearer " + token("etudiant@usms.ac.ma", "Passw0rd!2026")))
+                        .header("Authorization", "Bearer " + token("etudiant@usms.ac.ma", "Etudiant!2026")))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void meRetourneLUtilisateurCourant() throws Exception {
         mockMvc.perform(get("/api/me")
-                        .header("Authorization", "Bearer " + token("etudiant@usms.ac.ma", "Passw0rd!2026")))
+                        .header("Authorization", "Bearer " + token("etudiant@usms.ac.ma", "Etudiant!2026")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("etudiant@usms.ac.ma"))
-                .andExpect(jsonPath("$.role").value("STUDENT"));
+                .andExpect(jsonPath("$.prenom").value("Youssef"))
+                .andExpect(jsonPath("$.role").value("ETUDIANT"));
     }
 }

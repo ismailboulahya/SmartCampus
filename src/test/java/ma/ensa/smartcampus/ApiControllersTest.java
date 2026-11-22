@@ -4,13 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.when;
 
-import java.util.Optional;
 import ma.ensa.smartcampus.auth.JwtService;
 import ma.ensa.smartcampus.auth.LoginRateLimiter;
 import ma.ensa.smartcampus.auth.LoginService;
-import ma.ensa.smartcampus.repository.UserRepository;
 import ma.ensa.smartcampus.controller.AuthController;
 import ma.ensa.smartcampus.controller.StatusController;
+import ma.ensa.smartcampus.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -31,9 +30,19 @@ class ApiControllersTest {
 
     @Test
     void loginAvecMauvaisMotDePasseRetourne401() {
-        when(loginService.authenticate("inconnu@usms.ac.ma", "mauvais-mot-de-passe")).thenReturn(Optional.empty());
+        when(loginService.authentifier("inconnu@usms.ac.ma", "mauvais-mot-de-passe"))
+                .thenReturn(LoginService.Resultat.identifiantsInvalides());
         var response = controller.login(new AuthController.LoginRequest("inconnu@usms.ac.ma", "mauvais-mot-de-passe"));
         assertEquals(401, response.getStatusCode().value());
+        assertFalse((Boolean) response.getBody().get("success"));
+    }
+
+    @Test
+    void loginSurCompteVerrouilleRetourne423() {
+        when(loginService.authentifier("verrouille@usms.ac.ma", "SousChef!2026"))
+                .thenReturn(LoginService.Resultat.compteVerrouille(null));
+        var response = controller.login(new AuthController.LoginRequest("verrouille@usms.ac.ma", "SousChef!2026"));
+        assertEquals(423, response.getStatusCode().value());
         assertFalse((Boolean) response.getBody().get("success"));
     }
 }

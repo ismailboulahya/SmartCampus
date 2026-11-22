@@ -12,12 +12,14 @@ export default function App() {
     return <LoginPage />;
   }
 
+  const nomComplet = [user.prenom, user.nom].filter(Boolean).join(' ');
+
   // Placeholder : les espaces étudiant et admin seront ajoutés à l'étape suivante.
   return (
     <main className="login-page">
       <div className="login-card">
         <h1>Bienvenue</h1>
-        <p className="login-subtitle">{user.email} · {user.role}</p>
+        <p className="login-subtitle">{nomComplet || user.email} · {user.role}</p>
         <button onClick={logout}>Se déconnecter</button>
       </div>
     </main>
