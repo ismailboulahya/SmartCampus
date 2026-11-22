@@ -13,10 +13,18 @@ import org.springframework.stereotype.Service;
 @Service
 public class JwtService {
 
+    /** HS256 exige une clé d'au moins 256 bits. */
+    private static final int LONGUEUR_MINIMALE_DU_SECRET = 32;
+
     private final SecretKey key;
     private final long expiration;
 
-    public JwtService(@Value("${app.jwt.secret}") String secret, @Value("${app.jwt.expiration}") long expiration) {
+    public JwtService(@Value("${app.jwt.secret:}") String secret, @Value("${app.jwt.expiration}") long expiration) {
+        if (secret == null || secret.isBlank()
+                || secret.getBytes(StandardCharsets.UTF_8).length < LONGUEUR_MINIMALE_DU_SECRET) {
+            throw new IllegalStateException(
+                    "La variable d'environnement JWT_SECRET est absente ou trop courte (32 caractères minimum).");
+        }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expiration = expiration;
     }
@@ -25,7 +33,7 @@ public class JwtService {
         long now = System.currentTimeMillis();
         return Jwts.builder()
                 .subject(user.getEmail())
-                .claim("role", user.getRole())
+                .claim("role", user.getRole().name())
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + expiration))
                 .signWith(key)

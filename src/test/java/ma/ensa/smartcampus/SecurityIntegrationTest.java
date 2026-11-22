@@ -6,8 +6,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import ma.ensa.smartcampus.repository.UserRepository;
 import ma.ensa.smartcampus.model.User;
+import ma.ensa.smartcampus.model.UserRole;
+import ma.ensa.smartcampus.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,13 +36,13 @@ class SecurityIntegrationTest {
 
     @BeforeEach
     void seed() {
-        seedUser("admin@usms.ac.ma", "Admin!2026", "ADMIN");
-        seedUser("etudiant@usms.ac.ma", "Passw0rd!2026", "STUDENT");
+        seedUser("admin@usms.ac.ma", "Admin!2026", UserRole.ADMIN);
+        seedUser("souschef@usms.ac.ma", "SousChef!2026", UserRole.SOUS_CHEF);
     }
 
-    private void seedUser(String email, String password, String role) {
+    private void seedUser(String email, String password, UserRole role) {
         if (!users.existsByEmail(email)) {
-            users.save(new User(null, email, passwordEncoder.encode(password), role));
+            users.save(new User("Test", "Utilisateur", email, passwordEncoder.encode(password), role, null, 1));
         }
     }
 
@@ -95,18 +96,18 @@ class SecurityIntegrationTest {
     }
 
     @Test
-    void routeAdminAvecTokenEtudiantRetourne403() throws Exception {
+    void routeAdminAvecTokenSousChefRetourne403() throws Exception {
         mockMvc.perform(get("/api/admin/users")
-                        .header("Authorization", "Bearer " + token("etudiant@usms.ac.ma", "Passw0rd!2026")))
+                        .header("Authorization", "Bearer " + token("souschef@usms.ac.ma", "SousChef!2026")))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void meRetourneLUtilisateurCourant() throws Exception {
         mockMvc.perform(get("/api/me")
-                        .header("Authorization", "Bearer " + token("etudiant@usms.ac.ma", "Passw0rd!2026")))
+                        .header("Authorization", "Bearer " + token("souschef@usms.ac.ma", "SousChef!2026")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("etudiant@usms.ac.ma"))
-                .andExpect(jsonPath("$.role").value("STUDENT"));
+                .andExpect(jsonPath("$.email").value("souschef@usms.ac.ma"))
+                .andExpect(jsonPath("$.role").value("SOUS_CHEF"));
     }
 }
