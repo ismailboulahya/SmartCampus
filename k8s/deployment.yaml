@@ -23,8 +23,13 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgres-secret
+                  name: smartcampus-secret
                   key: POSTGRES_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: smartcampus-secret
+                  key: JWT_SECRET
           ports:
             - containerPort: 8080
           startupProbe:
@@ -36,7 +41,7 @@ spec:
             failureThreshold: 30
           readinessProbe:
             httpGet:
-              path: /api/health
+              path: /api/health/ready
               port: 8080
             initialDelaySeconds: 30
             periodSeconds: 5
