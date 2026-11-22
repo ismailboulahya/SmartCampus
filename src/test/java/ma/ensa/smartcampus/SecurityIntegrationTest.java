@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import ma.ensa.smartcampus.model.User;
 import ma.ensa.smartcampus.model.UserRole;
 import ma.ensa.smartcampus.repository.UserRepository;
@@ -80,6 +82,23 @@ class SecurityIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"\",\"password\":\"faux\"}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void loginSurCompteVerrouilleRetourne423() throws Exception {
+        String email = "verrouille@usms.ac.ma";
+        if (!users.existsByEmail(email)) {
+            User compte = new User("Compte", "Verrouille", email, passwordEncoder.encode("Verrouille!2026"),
+                    UserRole.SOUS_CHEF, 1004L, 1);
+            for (int tentative = 1; tentative <= 5; tentative++) {
+                compte.enregistrerEchecDeConnexion(5, Duration.ofMinutes(15), LocalDateTime.now());
+            }
+            users.save(compte);
+        }
+        mockMvc.perform(post("/api/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + email + "\",\"password\":\"Verrouille!2026\"}"))
+                .andExpect(status().isLocked());
     }
 
     @Test

@@ -1,6 +1,9 @@
 package ma.ensa.smartcampus.auth;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static ma.ensa.smartcampus.auth.LoginService.Statut.COMPTE_VERROUILLE;
+import static ma.ensa.smartcampus.auth.LoginService.Statut.IDENTIFIANTS_INVALIDES;
+import static ma.ensa.smartcampus.auth.LoginService.Statut.SUCCES;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -15,36 +18,59 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 public class LoginServiceTest {
 
+    private static final String EMAIL = "souschef@usms.ac.ma";
+    private static final String MOT_DE_PASSE = "SousChef!2026";
+
     private final UserRepository users = Mockito.mock(UserRepository.class);
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final LoginService loginService = new LoginService(users, passwordEncoder);
+    private final User compte = new User("Youssef", "Kabbaj", EMAIL, passwordEncoder.encode(MOT_DE_PASSE),
+            UserRole.SOUS_CHEF, 1003L, 1);
 
     private void compteExistant() {
-        when(users.findByEmail("souschef@usms.ac.ma")).thenReturn(Optional.of(
-                new User("Youssef", "Kabbaj", "souschef@usms.ac.ma",
-                        passwordEncoder.encode("SousChef!2026"), UserRole.SOUS_CHEF, 1003L, 1)));
+        when(users.findByEmail(EMAIL)).thenReturn(Optional.of(compte));
     }
 
     @Test
     public void testLoginSuccess() {
         compteExistant();
-        assertTrue(loginService.authenticate("souschef@usms.ac.ma", "SousChef!2026").isPresent());
+        assertEquals(SUCCES, loginService.authentifier(EMAIL, MOT_DE_PASSE).statut());
     }
 
     @Test
     public void testLoginFailureWrongPassword() {
         compteExistant();
-        assertFalse(loginService.authenticate("souschef@usms.ac.ma", "MotDePasseFaux").isPresent());
+        assertEquals(IDENTIFIANTS_INVALIDES, loginService.authentifier(EMAIL, "MotDePasseFaux").statut());
     }
 
     @Test
     public void testLoginFailureWrongDomain() {
-        assertFalse(loginService.authenticate("souschef@gmail.com", "SousChef!2026").isPresent());
+        assertEquals(IDENTIFIANTS_INVALIDES, loginService.authentifier("souschef@gmail.com", MOT_DE_PASSE).statut());
     }
 
     @Test
     public void testLoginIgnoreLaCasseDeLEmail() {
         compteExistant();
-        assertTrue(loginService.authenticate("SousChef@USMS.AC.MA", "SousChef!2026").isPresent());
+        assertEquals(SUCCES, loginService.authentifier("SousChef@USMS.AC.MA", MOT_DE_PASSE).statut());
+    }
+
+    @Test
+    public void testVerrouillageApresCinqEchecs() {
+        compteExistant();
+        for (int tentative = 1; tentative <= 4; tentative++) {
+            assertEquals(IDENTIFIANTS_INVALIDES, loginService.authentifier(EMAIL, "MotDePasseFaux").statut());
+        }
+        assertEquals(COMPTE_VERROUILLE, loginService.authentifier(EMAIL, "MotDePasseFaux").statut());
+        assertTrue(compte.isLocked());
+        assertEquals(5, compte.getFailedLoginAttempts());
+    }
+
+    @Test
+    public void testCompteVerrouilleRefuseLeBonMotDePasse() {
+        compteExistant();
+        for (int tentative = 1; tentative <= 5; tentative++) {
+            loginService.authentifier(EMAIL, "MotDePasseFaux");
+        }
+        assertEquals(COMPTE_VERROUILLE, loginService.authentifier(EMAIL, MOT_DE_PASSE).statut());
     }
 }

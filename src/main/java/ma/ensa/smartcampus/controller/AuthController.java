@@ -7,8 +7,8 @@ import java.util.Optional;
 import ma.ensa.smartcampus.auth.JwtService;
 import ma.ensa.smartcampus.auth.LoginRateLimiter;
 import ma.ensa.smartcampus.auth.LoginService;
-import ma.ensa.smartcampus.repository.UserRepository;
 import ma.ensa.smartcampus.model.User;
+import ma.ensa.smartcampus.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -38,19 +38,31 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
-        if (rateLimiter.isBlocked(request.email())) {
+        if (rateLimiter.estBloque(request.email())) {
             return ResponseEntity.status(429)
                     .body(Map.of("success", false, "message", "Trop de tentatives, réessayez plus tard."));
         }
-        Optional<User> user = loginService.authenticate(request.email(), request.password());
-        if (user.isEmpty()) {
-            rateLimiter.recordFailure(request.email());
-            return ResponseEntity.status(401)
-                    .body(Map.of("success", false, "message", "Identifiants invalides."));
-        }
-        rateLimiter.reset(request.email());
-        String token = jwtService.generate(user.get());
-        return ResponseEntity.ok(Map.of("success", true, "token", token, "role", user.get().getRole()));
+
+        LoginService.Resultat resultat = loginService.authentifier(request.email(), request.password());
+        return switch (resultat.statut()) {
+            case COMPTE_VERROUILLE -> ResponseEntity.status(423)
+                    .body(Map.of("success", false, "message", "Compte verrouillé, réessayez dans quelques minutes."));
+            case IDENTIFIANTS_INVALIDES -> {
+                rateLimiter.enregistrerEchec(request.email());
+                yield ResponseEntity.status(401)
+                        .body(Map.of("success", false, "message", "Identifiants invalides."));
+            }
+            case SUCCES -> {
+                rateLimiter.reinitialiser(request.email());
+                User utilisateur = resultat.utilisateur();
+                yield ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "token", jwtService.generate(utilisateur),
+                        "role", utilisateur.getRole().name(),
+                        "firstName", utilisateur.getFirstName(),
+                        "lastName", utilisateur.getLastName()));
+            }
+        };
     }
 
     @GetMapping("/me")
@@ -60,7 +72,13 @@ public class AuthController {
             return ResponseEntity.status(401)
                     .body(Map.of("success", false, "message", "Utilisateur inconnu."));
         }
-        return ResponseEntity.ok(Map.of("success", true, "email", user.get().getEmail(), "role", user.get().getRole()));
+        User utilisateur = user.get();
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "email", utilisateur.getEmail(),
+                "firstName", utilisateur.getFirstName(),
+                "lastName", utilisateur.getLastName(),
+                "role", utilisateur.getRole().name()));
     }
 
     @PostMapping("/logout")
