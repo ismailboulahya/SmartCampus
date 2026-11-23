@@ -1,8 +1,15 @@
-import { defineConfig } from "vite";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  esbuild: { jsx: "automatic" },
+  plugins: [react()],
   server: {
-    proxy: { "/api": "http://localhost:8080" },
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
+    },
   },
 });

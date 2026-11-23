@@ -1,14 +1,12 @@
-package ma.ensa.smartcampus.config;
+package ma.ensa.smartcampus.auth;
 
+import java.util.Arrays;
 import java.util.List;
-import ma.ensa.smartcampus.auth.JwtFilter;
-import ma.ensa.smartcampus.auth.JwtService;
-import ma.ensa.smartcampus.service.AccountService;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -30,17 +28,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService, AccountService accounts) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/login", "/api/health").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/admin", "/connexion", "/inscription",
-                                "/inscription.html", "/assets/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/inscriptions", "/api/inscriptions/email/renvoyer",
-                                "/api/inscriptions/email/confirmer", "/api/inscriptions/mfa/activer").permitAll()
+                        .requestMatchers("/api/login", "/api/health", "/api/health/ready").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(handling -> handling.authenticationEntryPoint((request, response, exception) -> {
@@ -48,16 +42,20 @@ public class SecurityConfig {
                     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                     response.getWriter().write("{\"success\":false,\"message\":\"Authentification requise.\"}");
                 }))
-                .addFilterBefore(new JwtFilter(jwtService, accounts), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.allowed-origins:http://localhost:5173}") String originesAutorisees) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedOrigins(Arrays.stream(originesAutorisees.split(","))
+                .map(String::trim)
+                .filter(origine -> !origine.isEmpty())
+                .toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

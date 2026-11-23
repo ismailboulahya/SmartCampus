@@ -1,64 +1,78 @@
 package ma.ensa.smartcampus.auth;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static ma.ensa.smartcampus.auth.LoginService.Statut.COMPTE_VERROUILLE;
+import static ma.ensa.smartcampus.auth.LoginService.Statut.IDENTIFIANTS_INVALIDES;
+import static ma.ensa.smartcampus.auth.LoginService.Statut.SUCCES;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 import java.util.Optional;
-import ma.ensa.smartcampus.entity.*;
-import ma.ensa.smartcampus.exception.LoginLimitExceededException;
+import ma.ensa.smartcampus.model.Etudiant;
+import ma.ensa.smartcampus.model.Filiere;
+import ma.ensa.smartcampus.model.NiveauEducation;
+import ma.ensa.smartcampus.model.User;
 import ma.ensa.smartcampus.repository.UserRepository;
-import ma.ensa.smartcampus.service.AccountCreationService;
-import ma.ensa.smartcampus.service.LoginService;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.authentication.BadCredentialsException;
+import org.mockito.Mockito;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
-class LoginServiceTest {
+public class LoginServiceTest {
 
-    private final UserRepository users = mock(UserRepository.class);
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-    private final JwtService tokens = mock(JwtService.class);
-    private final LoginService service = new LoginService(users, encoder, new LoginRateLimiter(), tokens);
+    private static final String EMAIL = "etudiant@usms.ac.ma";
+    private static final String MOT_DE_PASSE = "Etudiant!2026";
 
-    private Utilisateur compteExistant() {
-        var user = new AccountCreationService(encoder, users).student("etudiant@usms.ac.ma", "correct", "Salma", "Alaoui",
-                "D001", "MGSI");
-        user.setStatus(AccountStatus.ACTIF);
-        when(users.findByEmailAndStatus(user.getEmail(), AccountStatus.ACTIF)).thenReturn(Optional.of(user));
-        return user;
+    private final UserRepository users = Mockito.mock(UserRepository.class);
+    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final LoginService loginService = new LoginService(users, passwordEncoder);
+    private final User compte = new Etudiant("Kabbaj", "Youssef", EMAIL, passwordEncoder.encode(MOT_DE_PASSE),
+            "E123456", "AB123456", Filiere.GI, NiveauEducation.CYCLE1);
+
+    private void compteExistant() {
+        when(users.findByEmail(EMAIL)).thenReturn(Optional.of(compte));
     }
 
     @Test
-    void identifiantsValidesDonnentUnJeton() {
-        Utilisateur user = compteExistant();
-        when(tokens.generate(user.getEmail(), UserRole.STUDENT)).thenReturn("jwt");
-        assertEquals("jwt", service.login(user.getEmail(), "correct").token());
-    }
-
-    @Test
-    void mauvaisMotDePasseRefuse() {
-        Utilisateur user = compteExistant();
-        assertThrows(BadCredentialsException.class, () -> service.login(user.getEmail(), "incorrect"));
-        verifyNoInteractions(tokens);
-    }
-
-    @Test
-    void domaineExterneRefuse() {
-        assertThrows(BadCredentialsException.class, () -> service.login("etudiant@example.org", "correct"));
-        verifyNoInteractions(users, tokens);
-    }
-
-    @Test
-    void loginNormaliseAdresse() {
+    public void testLoginSuccess() {
         compteExistant();
-        assertEquals(UserRole.STUDENT, service.login(" Etudiant@USMS.AC.MA ", "correct").role());
+        assertEquals(SUCCES, loginService.authentifier(EMAIL, MOT_DE_PASSE).statut());
     }
 
     @Test
-    void limitePartageeEntreLesVariantesDeLaMemeAdresse() {
-        for (int attempt = 0; attempt < 5; attempt++) {
-            assertThrows(BadCredentialsException.class, () -> service.login("Etudiant@USMS.AC.MA", "faux"));
+    public void testLoginFailureWrongPassword() {
+        compteExistant();
+        assertEquals(IDENTIFIANTS_INVALIDES, loginService.authentifier(EMAIL, "MotDePasseFaux").statut());
+    }
+
+    @Test
+    public void testLoginFailureWrongDomain() {
+        assertEquals(IDENTIFIANTS_INVALIDES, loginService.authentifier("etudiant@gmail.com", MOT_DE_PASSE).statut());
+    }
+
+    @Test
+    public void testLoginIgnoreLaCasseDeLEmail() {
+        compteExistant();
+        assertEquals(SUCCES, loginService.authentifier("Etudiant@USMS.AC.MA", MOT_DE_PASSE).statut());
+    }
+
+    @Test
+    public void testVerrouillageApresCinqEchecs() {
+        compteExistant();
+        for (int tentative = 1; tentative <= 4; tentative++) {
+            assertEquals(IDENTIFIANTS_INVALIDES, loginService.authentifier(EMAIL, "MotDePasseFaux").statut());
         }
-        assertThrows(LoginLimitExceededException.class, () -> service.login(" etudiant@usms.ac.ma ", "faux"));
+        assertEquals(COMPTE_VERROUILLE, loginService.authentifier(EMAIL, "MotDePasseFaux").statut());
+        assertTrue(compte.isVerrouille());
+        assertEquals(5, compte.getNbrConnexionEchouee());
+    }
+
+    @Test
+    public void testCompteVerrouilleRefuseLeBonMotDePasse() {
+        compteExistant();
+        for (int tentative = 1; tentative <= 5; tentative++) {
+            loginService.authentifier(EMAIL, "MotDePasseFaux");
+        }
+        assertEquals(COMPTE_VERROUILLE, loginService.authentifier(EMAIL, MOT_DE_PASSE).statut());
     }
 }

@@ -1,43 +1,37 @@
 package ma.ensa.smartcampus.controller;
 
 import java.util.List;
-import jakarta.validation.Valid;
-
-import lombok.AllArgsConstructor;
-import ma.ensa.smartcampus.dto.AccountFilter;
-import ma.ensa.smartcampus.dto.AccountSummary;
-import ma.ensa.smartcampus.dto.AccountStatusChange;
-import ma.ensa.smartcampus.service.AccountService;
+import java.util.Map;
+import ma.ensa.smartcampus.model.User;
+import ma.ensa.smartcampus.repository.UserRepository;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/admin")
-@AllArgsConstructor
 public class AdminController {
 
-    private final AccountService accounts;
+    private final UserRepository users;
 
-
-    @GetMapping("/inscriptions")
-    public List<AccountSummary> registrationsReadyForReview() {
-        return accounts.registrationsReadyForReview();
+    public AdminController(UserRepository users) {
+        this.users = users;
     }
 
     @GetMapping("/users")
-    public List<AccountSummary> users(@ModelAttribute AccountFilter filter) {
-        return accounts.listAccounts(filter);
+    public List<Map<String, Object>> users() {
+        return users.findAll().stream()
+                .map(AdminController::resumer)
+                .toList();
     }
 
-    @PatchMapping("/users/{id}/statut")
-    public AccountSummary changeStatus(@PathVariable long id, @Valid @RequestBody AccountStatusChange change,
-            Authentication authentication) {
-        return accounts.changeStatus(id, change, authentication.getName());
+    private static Map<String, Object> resumer(User utilisateur) {
+        return Map.of(
+                "id", utilisateur.getId(),
+                "email", utilisateur.getEmail(),
+                "nom", utilisateur.getNom(),
+                "prenom", utilisateur.getPrenom(),
+                "role", utilisateur.getRole().name(),
+                "verrouille", utilisateur.isVerrouille());
     }
 }
