@@ -1,0 +1,10 @@
+services:
+  api:
+    environment:
+      SMTP_HOST: smtp.resend.com
+      SMTP_PORT: "587"
+      SMTP_AUTH: "true"
+      SMTP_STARTTLS: "true"
+      SMTP_USERNAME: resend
+      SMTP_PASSWORD: ${RESEND_API_KEY:?Renseignez la clé Resend dans PowerShell ou dans le fichier .env local}
+      REGISTRATION_FROM: onboarding@resend.dev
