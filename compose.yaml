@@ -9,6 +9,15 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
+      REGISTRATION_ENCRYPTION_KEY: ${REGISTRATION_ENCRYPTION_KEY:?Définissez une clé Base64 de 32 octets}
+      REGISTRATION_PUBLIC_URL: ${REGISTRATION_PUBLIC_URL:-http://localhost:8080}
+      REGISTRATION_FROM: ${REGISTRATION_FROM:-no-reply@usms.ac.ma}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_AUTH: ${SMTP_AUTH:-false}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
     depends_on:
       db:
         condition: service_healthy
@@ -18,6 +27,12 @@ services:
       timeout: 3s
       retries: 5
       start_period: 30s
+
+  mailpit:
+    image: axllent/mailpit:v1.34.0
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
 
   db:
     image: postgres:17-alpine

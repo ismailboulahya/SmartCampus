@@ -1,6 +1,7 @@
 package ma.ensa.smartcampus.controller;
 
-import java.util.Map;
+import ma.ensa.smartcampus.dto.HealthResponse;
+import ma.ensa.smartcampus.dto.DatabaseHealthResponse;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,13 +18,13 @@ public class StatusController {
     }
 
     @GetMapping("/health")
-    public Map<String, String> health() {
-        return Map.of("status", "UP");
+    public HealthResponse health() {
+        return new HealthResponse("UP");
     }
 
     @GetMapping("/db")
-    public Map<String, Object> db() {
+    public DatabaseHealthResponse db() {
         Integer r = jdbc.queryForObject("SELECT 1", Integer.class);
-        return Map.of("database", "UP", "result", r);
+        return new DatabaseHealthResponse("UP", r);
     }
 }
