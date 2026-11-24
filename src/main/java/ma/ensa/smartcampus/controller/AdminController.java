@@ -1,37 +1,43 @@
 package ma.ensa.smartcampus.controller;
 
 import java.util.List;
-import java.util.Map;
-import ma.ensa.smartcampus.model.User;
-import ma.ensa.smartcampus.repository.UserRepository;
+import jakarta.validation.Valid;
+
+import lombok.AllArgsConstructor;
+import ma.ensa.smartcampus.dto.AccountFilter;
+import ma.ensa.smartcampus.dto.AccountSummary;
+import ma.ensa.smartcampus.dto.AccountStatusChange;
+import ma.ensa.smartcampus.service.AccountService;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/admin")
+@AllArgsConstructor
 public class AdminController {
 
-    private final UserRepository users;
+    private final AccountService accounts;
 
-    public AdminController(UserRepository users) {
-        this.users = users;
+
+    @GetMapping("/inscriptions")
+    public List<AccountSummary> registrationsReadyForReview() {
+        return accounts.registrationsReadyForReview();
     }
 
     @GetMapping("/users")
-    public List<Map<String, Object>> users() {
-        return users.findAll().stream()
-                .map(AdminController::resumer)
-                .toList();
+    public List<AccountSummary> users(@ModelAttribute AccountFilter filter) {
+        return accounts.listAccounts(filter);
     }
 
-    private static Map<String, Object> resumer(User utilisateur) {
-        return Map.of(
-                "id", utilisateur.getId(),
-                "email", utilisateur.getEmail(),
-                "nom", utilisateur.getNom(),
-                "prenom", utilisateur.getPrenom(),
-                "role", utilisateur.getRole().name(),
-                "verrouille", utilisateur.isVerrouille());
+    @PatchMapping("/users/{id}/statut")
+    public AccountSummary changeStatus(@PathVariable long id, @Valid @RequestBody AccountStatusChange change,
+            Authentication authentication) {
+        return accounts.changeStatus(id, change, authentication.getName());
     }
 }

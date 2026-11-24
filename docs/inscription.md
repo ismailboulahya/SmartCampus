@@ -10,7 +10,7 @@ L’étudiant ou l’enseignant ouvre `/inscription.html`, dépose son dossier p
    $env:REGISTRATION_ENCRYPTION_KEY = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
    ```
 
-2. Exécuter `mvn verify`, puis `docker compose up --build`. Le Dockerfile utilise le JAR produit par Maven.
+2. Exécuter `docker compose up --build`. Docker compile React puis l’intègre au JAR Spring Boot. Pour exécuter la suite de tests localement, lancer `mvn verify`.
 3. Ouvrir `http://localhost:8080/inscription.html`. Dans cette configuration locale, les courriels sont capturés par Mailpit et consultables sur `http://localhost:8025`. Pour exécuter uniquement la boîte locale avec l’API lancée par Maven, utiliser `docker compose up mailpit` et le port SMTP local 1025.
 
 Avec un relais institutionnel, définir `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH` et `SMTP_STARTTLS` selon le relais. Définir également l’expéditeur `REGISTRATION_FROM` et l’origine HTTPS de l’application `REGISTRATION_PUBLIC_URL`. La clé de chiffrement est distincte de `JWT_SECRET`.

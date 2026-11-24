@@ -14,6 +14,10 @@ public interface UserRepository extends JpaRepository<Utilisateur, Long>, JpaSpe
 
     Optional<Utilisateur> findByEmailAndStatus(String email, AccountStatus status);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from Utilisateur u where u.email = :email and u.status = :status")
+    Optional<Utilisateur> lockForLogin(String email, AccountStatus status);
+
     @Query("select type(u) from Utilisateur u where u.email = :email and u.status = :status")
     Optional<Class<? extends Utilisateur>> findTypeByEmailAndStatus(String email, AccountStatus status);
 

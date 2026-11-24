@@ -51,6 +51,11 @@ public abstract class Utilisateur {
     private Instant emailVerifiedAt;
     private Instant mfaActivatedAt;
 
+    @Column(nullable = false)
+    private int failedLogins;
+
+    private Instant loginLockedUntil;
+
     @Column(updatable = false)
     private Instant createdAt;
 }

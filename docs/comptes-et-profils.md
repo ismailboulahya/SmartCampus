@@ -49,9 +49,13 @@ Exemple : `GET /api/admin/users?role=TEACHER&status=ACTIF`.
 
 ## Reprendre une base existante
 
+La branche salles (SC-9) avait son propre historique Flyway V1/V2. Au démarrage, l’application reconnaît cet historique ou la colonne historique `type_utilisateur`. Elle conserve les migrations déjà appliquées et convertit les comptes vers le modèle commun. Les identifiants, hachages, salles et équipements existants sont conservés. Les rôles historiques `ETUDIANT`, `PROFESSEUR` et `SUPERADMIN` deviennent respectivement `STUDENT`, `TEACHER` et `ADMIN`. Ces comptes issus de SC-9 commencent en `EN_ATTENTE`. Sur une base d’inscription déjà en V3, les statuts existants sont conservés.
+
 Flyway reconnaît l’ancien schéma SmartCampus comme version 1 et applique la migration V2. Utiliser une base ou un schéma dédié à SmartCampus. La migration conserve les identifiants, les hachages et les rôles. Elle normalise les e-mails et place **tous les comptes existants, administrateurs compris**, en `EN_ATTENTE`. Les dates de création et les données universitaires historiques inconnues restent nulles.
 
 Avant la mise à niveau, inventorier les anciens rôles et vérifier que deux adresses distinctes ne deviennent pas identiques après normalisation. Une collision ou un rôle inconnu demande une décision sur les données avant de pouvoir terminer la migration.
+
+Sur SC-9, vérifier également l’unicité des matricules non nuls. Les profils historiques incomplets restent en attente avec leurs données d’origine.
 
 ```sql
 SELECT role, COUNT(*) FROM users GROUP BY role;
