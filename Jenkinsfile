@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         maven 'Maven-3.9'
-        nodejs 'NodeJS-22'
+        nodejs 'NodeJS-26'
     }
 
     options {
