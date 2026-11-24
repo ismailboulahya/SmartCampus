@@ -2,6 +2,9 @@ package ma.ensa.smartcampus.exception;
 
 import java.util.Map;
 import java.util.Objects;
+import ma.ensa.smartcampus.dto.ApiMessage;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.LockedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -16,6 +19,31 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(AccountDecisionException.class)
+    public ResponseEntity<ApiMessage> decisionConflict(AccountDecisionException exception) {
+        return ResponseEntity.status(exception.getStatus()).body(new ApiMessage(false, exception.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidRegistrationException.class)
+    public ResponseEntity<ApiMessage> invalidRegistration(InvalidRegistrationException exception) {
+        return ResponseEntity.badRequest().body(new ApiMessage(false, exception.getMessage()));
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ApiMessage> invalidCredentials() {
+        return ResponseEntity.status(401).body(new ApiMessage(false, "Identifiants invalides."));
+    }
+
+    @ExceptionHandler(LockedException.class)
+    public ResponseEntity<ApiMessage> locked() {
+        return ResponseEntity.status(423).body(new ApiMessage(false, "Compte temporairement verrouillé."));
+    }
+
+    @ExceptionHandler(LoginLimitExceededException.class)
+    public ResponseEntity<ApiMessage> tooManyAttempts() {
+        return ResponseEntity.status(429).body(new ApiMessage(false, "Trop de tentatives, réessayez plus tard."));
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException exception) {

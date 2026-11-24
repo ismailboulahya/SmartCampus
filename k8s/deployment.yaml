@@ -20,6 +20,11 @@ spec:
             - configMapRef:
                 name: smartcampus-config
           env:
+            - name: REGISTRATION_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: smartcampus-secret
+                  key: REGISTRATION_ENCRYPTION_KEY
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:

@@ -16,7 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Vérifie que la migration V2 correspond à l'entité et que l'unicité du nom est bien portée par la base.
+ * Vérifie la persistance des salles, de leurs équipements et de la contrainte d'unicité.
  */
 @SpringBootTest
 @ActiveProfiles("test")
